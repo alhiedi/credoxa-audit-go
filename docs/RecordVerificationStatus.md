@@ -1,0 +1,27 @@
+# RecordVerificationStatus
+
+## Enum
+
+
+* `VALID` (value: `"VALID"`)
+
+* `RECORD_MISSING` (value: `"RECORD_MISSING"`)
+
+* `INTEGRITY_ENTRY_MISSING` (value: `"INTEGRITY_ENTRY_MISSING"`)
+
+* `DOMAIN_MISMATCH` (value: `"DOMAIN_MISMATCH"`)
+
+* `RECORD_ID_MISMATCH` (value: `"RECORD_ID_MISMATCH"`)
+
+* `UNSUPPORTED_REPRESENTATION_VERSION` (value: `"UNSUPPORTED_REPRESENTATION_VERSION"`)
+
+* `UNSUPPORTED_DIGEST_ALGORITHM` (value: `"UNSUPPORTED_DIGEST_ALGORITHM"`)
+
+* `RECORD_CANONICALIZATION_FAILED` (value: `"RECORD_CANONICALIZATION_FAILED"`)
+
+* `RECORD_DIGEST_MISMATCH` (value: `"RECORD_DIGEST_MISMATCH"`)
+
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
+

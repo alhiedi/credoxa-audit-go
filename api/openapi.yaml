@@ -1,0 +1,1203 @@
+openapi: 3.0.3
+info:
+  description: |
+    Public API contract for the Credoxa Audit service.
+
+    Authentication is provider-neutral. Consumers present an external
+    bearer credential which is verified by the configured authentication
+    adapter before Credoxa Audit establishes tenant/platform, actor, and
+    capability authority.
+  license:
+    name: LicenseRef-Proprietary
+  title: Credoxa Audit API
+  version: 1.0.0
+servers:
+- description: Current Credoxa Audit service origin
+  url: /
+security:
+- bearerAuth: []
+tags:
+- name: Audit Events
+- name: Audit Records
+- name: Audit Search
+- name: Audit Integrity
+paths:
+  /v1/audit/events:
+    post:
+      description: |
+        Requires capability `audit.events.write`.
+      operationId: publishAuditEvent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishAuditEventRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditRecordResponse"
+          description: Audit event accepted and persisted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      summary: Publish an audit event
+      tags:
+      - Audit Events
+      x-credoxa-capability: audit.events.write
+  /v1/audit/events/{event_id}:
+    get:
+      description: |
+        Requires capability `audit.records.read`.
+      operationId: getAuditEvent
+      parameters:
+      - explode: false
+        in: path
+        name: event_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditRecordResponse"
+          description: Audit record
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      summary: Retrieve the audit record for an event
+      tags:
+      - Audit Events
+      x-credoxa-capability: audit.records.read
+  /v1/audit/records:
+    get:
+      description: |
+        Requires capability `audit.records.read`.
+      operationId: listAuditRecords
+      parameters:
+      - explode: true
+        in: query
+        name: page_size
+        required: false
+        schema:
+          default: 50
+          maximum: 100
+          minimum: 1
+          type: integer
+        style: form
+      - description: |
+          Opaque continuation cursor returned by Credoxa Audit.
+          When supplied, the value must not be empty or whitespace-only.
+        explode: true
+        in: query
+        name: cursor
+        required: false
+        schema:
+          minLength: 1
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditRecordPageResponse"
+          description: Page of audit records
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      summary: List audit records
+      tags:
+      - Audit Records
+      x-credoxa-capability: audit.records.read
+  /v1/audit/records/{record_id}:
+    get:
+      description: |
+        Requires capability `audit.records.read`.
+      operationId: getAuditRecord
+      parameters:
+      - explode: false
+        in: path
+        name: record_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditRecordResponse"
+          description: Audit record
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      summary: Retrieve an audit record
+      tags:
+      - Audit Records
+      x-credoxa-capability: audit.records.read
+  /v1/audit/search:
+    get:
+      description: |
+        Requires capability `audit.records.search`.
+      operationId: searchAuditRecords
+      parameters:
+      - description: |
+          Inclusive lower timestamp filter. The value must be a
+          timezone-aware ISO-8601 date-time. When occurred_at_to is
+          also supplied, occurred_at_from must be earlier than
+          occurred_at_to.
+        explode: true
+        in: query
+        name: occurred_at_from
+        required: false
+        schema:
+          format: date-time
+          type: string
+        style: form
+      - description: |
+          Exclusive upper timestamp filter. The value must be a
+          timezone-aware ISO-8601 date-time. When occurred_at_from is
+          also supplied, occurred_at_from must be earlier than
+          occurred_at_to.
+        explode: true
+        in: query
+        name: occurred_at_to
+        required: false
+        schema:
+          format: date-time
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: actor_id
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: actor_kind
+        required: false
+        schema:
+          $ref: "#/components/schemas/ActorKind"
+        style: form
+      - explode: true
+        in: query
+        name: action
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: outcome
+        required: false
+        schema:
+          $ref: "#/components/schemas/AuditOutcome"
+        style: form
+      - description: |
+          Target resource type filter. When supplied, the value must
+          not be empty or whitespace-only.
+        explode: true
+        in: query
+        name: target_resource_type
+        required: false
+        schema:
+          minLength: 1
+          type: string
+        style: form
+      - description: |
+          Target resource identifier filter. When supplied, the value
+          must not be empty or whitespace-only and target_resource_type
+          must also be supplied.
+        explode: true
+        in: query
+        name: target_resource_id
+        required: false
+        schema:
+          minLength: 1
+          type: string
+        style: form
+      - description: |
+          Correlation identifier filter. When supplied, the value must
+          not be empty or whitespace-only.
+        explode: true
+        in: query
+        name: correlation_id
+        required: false
+        schema:
+          minLength: 1
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: page_size
+        required: false
+        schema:
+          default: 50
+          maximum: 100
+          minimum: 1
+          type: integer
+        style: form
+      - description: |
+          Opaque continuation cursor returned by Credoxa Audit.
+          When supplied, the value must not be empty or whitespace-only.
+        explode: true
+        in: query
+        name: cursor
+        required: false
+        schema:
+          minLength: 1
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditRecordPageResponse"
+          description: Page of matching audit records
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      summary: Search audit records
+      tags:
+      - Audit Search
+      x-credoxa-capability: audit.records.search
+  /v1/audit/integrity/records/{record_id}:
+    get:
+      description: |
+        Requires capability `audit.integrity.read`.
+      operationId: verifyAuditRecordIntegrity
+      parameters:
+      - explode: false
+        in: path
+        name: record_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordIntegrityResponse"
+          description: Record integrity verification result
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      summary: Verify integrity of an audit record
+      tags:
+      - Audit Integrity
+      x-credoxa-capability: audit.integrity.read
+  /v1/audit/integrity/ranges:
+    get:
+      description: |
+        Requires capability `audit.integrity.read`.
+      operationId: verifyAuditIntegrityRange
+      parameters:
+      - description: |
+          First integrity-chain sequence to verify. Must be at least 1.
+          end_sequence must be greater than or equal to start_sequence,
+          and the inclusive requested range must contain at most 1000
+          positions.
+        explode: true
+        in: query
+        name: start_sequence
+        required: true
+        schema:
+          minimum: 1
+          type: integer
+        style: form
+      - description: |
+          Last integrity-chain sequence to verify. Must be at least 1
+          and greater than or equal to start_sequence. The inclusive
+          requested range must contain at most 1000 positions.
+        explode: true
+        in: query
+        name: end_sequence
+        required: true
+        schema:
+          minimum: 1
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrityRangeResponse"
+          description: Integrity range verification result
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      summary: Verify an audit integrity range
+      tags:
+      - Audit Integrity
+      x-credoxa-capability: audit.integrity.read
+components:
+  parameters:
+    EventId:
+      explode: false
+      in: path
+      name: event_id
+      required: true
+      schema:
+        type: string
+      style: simple
+    RecordId:
+      explode: false
+      in: path
+      name: record_id
+      required: true
+      schema:
+        type: string
+      style: simple
+    PageSize:
+      explode: true
+      in: query
+      name: page_size
+      required: false
+      schema:
+        default: 50
+        maximum: 100
+        minimum: 1
+        type: integer
+      style: form
+    Cursor:
+      description: |
+        Opaque continuation cursor returned by Credoxa Audit.
+        When supplied, the value must not be empty or whitespace-only.
+      explode: true
+      in: query
+      name: cursor
+      required: false
+      schema:
+        minLength: 1
+        type: string
+      style: form
+    OccurredAtFrom:
+      description: |
+        Inclusive lower timestamp filter. The value must be a
+        timezone-aware ISO-8601 date-time. When occurred_at_to is
+        also supplied, occurred_at_from must be earlier than
+        occurred_at_to.
+      explode: true
+      in: query
+      name: occurred_at_from
+      required: false
+      schema:
+        format: date-time
+        type: string
+      style: form
+    OccurredAtTo:
+      description: |
+        Exclusive upper timestamp filter. The value must be a
+        timezone-aware ISO-8601 date-time. When occurred_at_from is
+        also supplied, occurred_at_from must be earlier than
+        occurred_at_to.
+      explode: true
+      in: query
+      name: occurred_at_to
+      required: false
+      schema:
+        format: date-time
+        type: string
+      style: form
+    ActorId:
+      explode: true
+      in: query
+      name: actor_id
+      required: false
+      schema:
+        type: string
+      style: form
+    ActorKind:
+      explode: true
+      in: query
+      name: actor_kind
+      required: false
+      schema:
+        $ref: "#/components/schemas/ActorKind"
+      style: form
+    Action:
+      explode: true
+      in: query
+      name: action
+      required: false
+      schema:
+        type: string
+      style: form
+    Outcome:
+      explode: true
+      in: query
+      name: outcome
+      required: false
+      schema:
+        $ref: "#/components/schemas/AuditOutcome"
+      style: form
+    TargetResourceType:
+      description: |
+        Target resource type filter. When supplied, the value must
+        not be empty or whitespace-only.
+      explode: true
+      in: query
+      name: target_resource_type
+      required: false
+      schema:
+        minLength: 1
+        type: string
+      style: form
+    TargetResourceId:
+      description: |
+        Target resource identifier filter. When supplied, the value
+        must not be empty or whitespace-only and target_resource_type
+        must also be supplied.
+      explode: true
+      in: query
+      name: target_resource_id
+      required: false
+      schema:
+        minLength: 1
+        type: string
+      style: form
+    CorrelationId:
+      description: |
+        Correlation identifier filter. When supplied, the value must
+        not be empty or whitespace-only.
+      explode: true
+      in: query
+      name: correlation_id
+      required: false
+      schema:
+        minLength: 1
+        type: string
+      style: form
+    StartSequence:
+      description: |
+        First integrity-chain sequence to verify. Must be at least 1.
+        end_sequence must be greater than or equal to start_sequence,
+        and the inclusive requested range must contain at most 1000
+        positions.
+      explode: true
+      in: query
+      name: start_sequence
+      required: true
+      schema:
+        minimum: 1
+        type: integer
+      style: form
+    EndSequence:
+      description: |
+        Last integrity-chain sequence to verify. Must be at least 1
+        and greater than or equal to start_sequence. The inclusive
+        requested range must contain at most 1000 positions.
+      explode: true
+      in: query
+      name: end_sequence
+      required: true
+      schema:
+        minimum: 1
+        type: integer
+      style: form
+  responses:
+    BadRequest:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Malformed or invalid request
+    Unauthenticated:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: No verified authentication authority
+    Forbidden:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Verified caller lacks required authority
+    NotFound:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Resource not found within caller scope
+    Conflict:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Immutable or idempotency conflict
+  schemas:
+    ActorKind:
+      enum:
+      - human
+      - service
+      - system
+      type: string
+    AuditOutcome:
+      enum:
+      - success
+      - failure
+      - denied
+      - unknown
+      type: string
+    AuditTarget:
+      additionalProperties: false
+      properties:
+        resource_type:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9]+(?:[._:-][A-Za-z0-9]+)*$"
+          type: string
+        resource_id:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$"
+          type: string
+      required:
+      - resource_id
+      - resource_type
+      type: object
+    AuditProvenance:
+      additionalProperties: false
+      properties:
+        source:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$"
+          type: string
+      required:
+      - source
+      type: object
+    PublishAuditEventRequest:
+      additionalProperties: false
+      example:
+        occurred_at: 2000-01-23T04:56:07.000+00:00
+        metadata:
+          key: ""
+        event_id: event_id
+        provenance: ""
+        action: action
+        correlation_id: correlation_id
+        outcome: success
+        target: ""
+      properties:
+        event_id:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$"
+          type: string
+        occurred_at:
+          format: date-time
+          type: string
+        action:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9]+(?:[._:-][A-Za-z0-9]+)*$"
+          type: string
+        outcome:
+          $ref: "#/components/schemas/AuditOutcome"
+        target:
+          allOf:
+          - $ref: "#/components/schemas/AuditTarget"
+          nullable: true
+        metadata:
+          additionalProperties: true
+          nullable: true
+          type: object
+        provenance:
+          allOf:
+          - $ref: "#/components/schemas/AuditProvenance"
+          nullable: true
+        correlation_id:
+          maxLength: 255
+          minLength: 1
+          nullable: true
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$"
+          type: string
+      required:
+      - action
+      - event_id
+      - occurred_at
+      - outcome
+      type: object
+    AuditRecord:
+      additionalProperties: false
+      example:
+        tenant_id: tenant_id
+        target_resource_type: target_resource_type
+        actor_kind: ""
+        metadata:
+          key: ""
+        is_platform: true
+        target_resource_id: target_resource_id
+        occurred_at: 2000-01-23T04:56:07.000+00:00
+        record_id: record_id
+        recorded_at: 2000-01-23T04:56:07.000+00:00
+        event_id: event_id
+        provenance_source: provenance_source
+        action: action
+        correlation_id: correlation_id
+        actor_id: actor_id
+        outcome: success
+      properties:
+        record_id:
+          type: string
+        event_id:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$"
+          type: string
+        occurred_at:
+          format: date-time
+          type: string
+        recorded_at:
+          format: date-time
+          type: string
+        tenant_id:
+          nullable: true
+          type: string
+        is_platform:
+          type: boolean
+        actor_id:
+          nullable: true
+          type: string
+        actor_kind:
+          allOf:
+          - $ref: "#/components/schemas/ActorKind"
+          nullable: true
+        action:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9]+(?:[._:-][A-Za-z0-9]+)*$"
+          type: string
+        outcome:
+          $ref: "#/components/schemas/AuditOutcome"
+        target_resource_type:
+          maxLength: 255
+          minLength: 1
+          nullable: true
+          pattern: "^[A-Za-z0-9]+(?:[._:-][A-Za-z0-9]+)*$"
+          type: string
+        target_resource_id:
+          maxLength: 255
+          minLength: 1
+          nullable: true
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$"
+          type: string
+        metadata:
+          additionalProperties: true
+          nullable: true
+          type: object
+        provenance_source:
+          maxLength: 255
+          minLength: 1
+          nullable: true
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$"
+          type: string
+        correlation_id:
+          maxLength: 255
+          minLength: 1
+          nullable: true
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$"
+          type: string
+      required:
+      - action
+      - actor_id
+      - actor_kind
+      - correlation_id
+      - event_id
+      - is_platform
+      - metadata
+      - occurred_at
+      - outcome
+      - provenance_source
+      - record_id
+      - recorded_at
+      - target_resource_id
+      - target_resource_type
+      - tenant_id
+      type: object
+    AuditRecordPage:
+      additionalProperties: false
+      example:
+        next_cursor: next_cursor
+        records:
+        - tenant_id: tenant_id
+          target_resource_type: target_resource_type
+          actor_kind: ""
+          metadata:
+            key: ""
+          is_platform: true
+          target_resource_id: target_resource_id
+          occurred_at: 2000-01-23T04:56:07.000+00:00
+          record_id: record_id
+          recorded_at: 2000-01-23T04:56:07.000+00:00
+          event_id: event_id
+          provenance_source: provenance_source
+          action: action
+          correlation_id: correlation_id
+          actor_id: actor_id
+          outcome: success
+        - tenant_id: tenant_id
+          target_resource_type: target_resource_type
+          actor_kind: ""
+          metadata:
+            key: ""
+          is_platform: true
+          target_resource_id: target_resource_id
+          occurred_at: 2000-01-23T04:56:07.000+00:00
+          record_id: record_id
+          recorded_at: 2000-01-23T04:56:07.000+00:00
+          event_id: event_id
+          provenance_source: provenance_source
+          action: action
+          correlation_id: correlation_id
+          actor_id: actor_id
+          outcome: success
+      properties:
+        records:
+          items:
+            $ref: "#/components/schemas/AuditRecord"
+          type: array
+        next_cursor:
+          nullable: true
+          type: string
+      required:
+      - next_cursor
+      - records
+      type: object
+    RecordVerificationStatus:
+      enum:
+      - VALID
+      - RECORD_MISSING
+      - INTEGRITY_ENTRY_MISSING
+      - DOMAIN_MISMATCH
+      - RECORD_ID_MISMATCH
+      - UNSUPPORTED_REPRESENTATION_VERSION
+      - UNSUPPORTED_DIGEST_ALGORITHM
+      - RECORD_CANONICALIZATION_FAILED
+      - RECORD_DIGEST_MISMATCH
+      type: string
+    ChainVerificationStatus:
+      enum:
+      - VALID
+      - EMPTY_RANGE
+      - BOUNDARY_MISSING
+      - SEQUENCE_GAP
+      - DOMAIN_MISMATCH
+      - UNSUPPORTED_REPRESENTATION_VERSION
+      - UNSUPPORTED_DIGEST_ALGORITHM
+      - PREVIOUS_DIGEST_MISMATCH
+      - CHAIN_DIGEST_MISMATCH
+      type: string
+    EvidenceContinuityStatus:
+      enum:
+      - COMPLETE
+      - AUTHORIZED_DISPOSITIONS
+      - RECORD_INTEGRITY_FAILURE
+      - UNEXPLAINED_RECORD_ABSENCE
+      type: string
+    IntegrityPositionStatus:
+      enum:
+      - PRESENT_VALID
+      - PRESENT_TAMPERED
+      - MISSING_AUTHORIZED_DISPOSITION
+      - MISSING_UNEXPLAINED
+      type: string
+    RecordIntegrityResult:
+      additionalProperties: false
+      example:
+        record_id: record_id
+        sequence: 0
+        digest_algorithm: digest_algorithm
+        domain: domain
+        stored_record_digest: stored_record_digest
+        recomputed_record_digest: recomputed_record_digest
+        status: VALID
+        representation_version: representation_version
+      properties:
+        status:
+          $ref: "#/components/schemas/RecordVerificationStatus"
+        record_id:
+          type: string
+        domain:
+          nullable: true
+          type: string
+        sequence:
+          nullable: true
+          type: integer
+        representation_version:
+          nullable: true
+          type: string
+        digest_algorithm:
+          nullable: true
+          type: string
+        stored_record_digest:
+          nullable: true
+          type: string
+        recomputed_record_digest:
+          nullable: true
+          type: string
+      required:
+      - digest_algorithm
+      - domain
+      - recomputed_record_digest
+      - record_id
+      - representation_version
+      - sequence
+      - status
+      - stored_record_digest
+      type: object
+    IntegrityPositionResult:
+      additionalProperties: false
+      example:
+        expected_previous_chain_digest: expected_previous_chain_digest
+        sequence: 7
+        record_id: record_id
+        recomputed_chain_digest: recomputed_chain_digest
+        lifecycle_operation_id: lifecycle_operation_id
+        stored_chain_digest: stored_chain_digest
+        stored_previous_chain_digest: stored_previous_chain_digest
+        status: PRESENT_VALID
+        record_verification_status: ""
+      properties:
+        sequence:
+          type: integer
+        record_id:
+          type: string
+        status:
+          $ref: "#/components/schemas/IntegrityPositionStatus"
+        stored_previous_chain_digest:
+          type: string
+        expected_previous_chain_digest:
+          type: string
+        stored_chain_digest:
+          type: string
+        recomputed_chain_digest:
+          nullable: true
+          type: string
+        record_verification_status:
+          allOf:
+          - $ref: "#/components/schemas/RecordVerificationStatus"
+          nullable: true
+        lifecycle_operation_id:
+          nullable: true
+          type: string
+      required:
+      - expected_previous_chain_digest
+      - lifecycle_operation_id
+      - recomputed_chain_digest
+      - record_id
+      - record_verification_status
+      - sequence
+      - status
+      - stored_chain_digest
+      - stored_previous_chain_digest
+      type: object
+    IntegrityRangeResult:
+      additionalProperties: false
+      example:
+        chain_status: VALID
+        final_sequence: 2
+        end_sequence: 6
+        domain: domain
+        final_chain_digest: final_chain_digest
+        evidence_status: COMPLETE
+        checked_positions: 1
+        boundary_chain_digest: boundary_chain_digest
+        start_sequence: 0
+        boundary_sequence: 5
+        positions:
+        - expected_previous_chain_digest: expected_previous_chain_digest
+          sequence: 7
+          record_id: record_id
+          recomputed_chain_digest: recomputed_chain_digest
+          lifecycle_operation_id: lifecycle_operation_id
+          stored_chain_digest: stored_chain_digest
+          stored_previous_chain_digest: stored_previous_chain_digest
+          status: PRESENT_VALID
+          record_verification_status: ""
+        - expected_previous_chain_digest: expected_previous_chain_digest
+          sequence: 7
+          record_id: record_id
+          recomputed_chain_digest: recomputed_chain_digest
+          lifecycle_operation_id: lifecycle_operation_id
+          stored_chain_digest: stored_chain_digest
+          stored_previous_chain_digest: stored_previous_chain_digest
+          status: PRESENT_VALID
+          record_verification_status: ""
+        first_failure_sequence: 5
+      properties:
+        domain:
+          type: string
+        start_sequence:
+          type: integer
+        end_sequence:
+          type: integer
+        chain_status:
+          $ref: "#/components/schemas/ChainVerificationStatus"
+        evidence_status:
+          $ref: "#/components/schemas/EvidenceContinuityStatus"
+        checked_positions:
+          type: integer
+        first_failure_sequence:
+          nullable: true
+          type: integer
+        boundary_sequence:
+          nullable: true
+          type: integer
+        boundary_chain_digest:
+          nullable: true
+          type: string
+        final_sequence:
+          nullable: true
+          type: integer
+        final_chain_digest:
+          nullable: true
+          type: string
+        positions:
+          items:
+            $ref: "#/components/schemas/IntegrityPositionResult"
+          type: array
+      required:
+      - boundary_chain_digest
+      - boundary_sequence
+      - chain_status
+      - checked_positions
+      - domain
+      - end_sequence
+      - evidence_status
+      - final_chain_digest
+      - final_sequence
+      - first_failure_sequence
+      - positions
+      - start_sequence
+      type: object
+    Error:
+      additionalProperties: false
+      example:
+        code: code
+        message: message
+        request_id: request_id
+        status: 0
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        status:
+          type: integer
+        request_id:
+          type: string
+      required:
+      - code
+      - message
+      - request_id
+      - status
+      type: object
+    ErrorResponse:
+      additionalProperties: false
+      example:
+        error:
+          code: code
+          message: message
+          request_id: request_id
+          status: 0
+      properties:
+        error:
+          $ref: "#/components/schemas/Error"
+      required:
+      - error
+      type: object
+    AuditRecordResponse:
+      additionalProperties: false
+      example:
+        data:
+          tenant_id: tenant_id
+          target_resource_type: target_resource_type
+          actor_kind: ""
+          metadata:
+            key: ""
+          is_platform: true
+          target_resource_id: target_resource_id
+          occurred_at: 2000-01-23T04:56:07.000+00:00
+          record_id: record_id
+          recorded_at: 2000-01-23T04:56:07.000+00:00
+          event_id: event_id
+          provenance_source: provenance_source
+          action: action
+          correlation_id: correlation_id
+          actor_id: actor_id
+          outcome: success
+        request_id: request_id
+      properties:
+        data:
+          $ref: "#/components/schemas/AuditRecord"
+        request_id:
+          type: string
+      required:
+      - data
+      - request_id
+      type: object
+    AuditRecordPageResponse:
+      additionalProperties: false
+      example:
+        data:
+          next_cursor: next_cursor
+          records:
+          - tenant_id: tenant_id
+            target_resource_type: target_resource_type
+            actor_kind: ""
+            metadata:
+              key: ""
+            is_platform: true
+            target_resource_id: target_resource_id
+            occurred_at: 2000-01-23T04:56:07.000+00:00
+            record_id: record_id
+            recorded_at: 2000-01-23T04:56:07.000+00:00
+            event_id: event_id
+            provenance_source: provenance_source
+            action: action
+            correlation_id: correlation_id
+            actor_id: actor_id
+            outcome: success
+          - tenant_id: tenant_id
+            target_resource_type: target_resource_type
+            actor_kind: ""
+            metadata:
+              key: ""
+            is_platform: true
+            target_resource_id: target_resource_id
+            occurred_at: 2000-01-23T04:56:07.000+00:00
+            record_id: record_id
+            recorded_at: 2000-01-23T04:56:07.000+00:00
+            event_id: event_id
+            provenance_source: provenance_source
+            action: action
+            correlation_id: correlation_id
+            actor_id: actor_id
+            outcome: success
+        request_id: request_id
+      properties:
+        data:
+          $ref: "#/components/schemas/AuditRecordPage"
+        request_id:
+          type: string
+      required:
+      - data
+      - request_id
+      type: object
+    RecordIntegrityResponse:
+      additionalProperties: false
+      example:
+        data:
+          record_id: record_id
+          sequence: 0
+          digest_algorithm: digest_algorithm
+          domain: domain
+          stored_record_digest: stored_record_digest
+          recomputed_record_digest: recomputed_record_digest
+          status: VALID
+          representation_version: representation_version
+        request_id: request_id
+      properties:
+        data:
+          $ref: "#/components/schemas/RecordIntegrityResult"
+        request_id:
+          type: string
+      required:
+      - data
+      - request_id
+      type: object
+    IntegrityRangeResponse:
+      additionalProperties: false
+      example:
+        data:
+          chain_status: VALID
+          final_sequence: 2
+          end_sequence: 6
+          domain: domain
+          final_chain_digest: final_chain_digest
+          evidence_status: COMPLETE
+          checked_positions: 1
+          boundary_chain_digest: boundary_chain_digest
+          start_sequence: 0
+          boundary_sequence: 5
+          positions:
+          - expected_previous_chain_digest: expected_previous_chain_digest
+            sequence: 7
+            record_id: record_id
+            recomputed_chain_digest: recomputed_chain_digest
+            lifecycle_operation_id: lifecycle_operation_id
+            stored_chain_digest: stored_chain_digest
+            stored_previous_chain_digest: stored_previous_chain_digest
+            status: PRESENT_VALID
+            record_verification_status: ""
+          - expected_previous_chain_digest: expected_previous_chain_digest
+            sequence: 7
+            record_id: record_id
+            recomputed_chain_digest: recomputed_chain_digest
+            lifecycle_operation_id: lifecycle_operation_id
+            stored_chain_digest: stored_chain_digest
+            stored_previous_chain_digest: stored_previous_chain_digest
+            status: PRESENT_VALID
+            record_verification_status: ""
+          first_failure_sequence: 5
+        request_id: request_id
+      properties:
+        data:
+          $ref: "#/components/schemas/IntegrityRangeResult"
+        request_id:
+          type: string
+      required:
+      - data
+      - request_id
+      type: object
+  securitySchemes:
+    bearerAuth:
+      description: |
+        External bearer credential verified by the configured Credoxa Audit
+        authentication adapter. Credoxa Audit is not the credential issuer
+        or identity provider.
+      scheme: bearer
+      type: http
